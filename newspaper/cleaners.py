@@ -29,6 +29,9 @@ class DocumentCleaner(object):
             "|konafilter|KonaFilter|breadcrumbs|^fn$|wp-caption-text"
             "|legende|ajoutVideo|timestamp|js_replies|image|image-wrapper"
         )
+        self.remove_nodes_beginning_with_text = {
+            'related:', 'related - ', 'never miss a story'
+        }
         self.regexp_namespace = "http://exslt.org/regular-expressions"
         self.nauthy_ids_re = ("//*[re:test(@id, '%s', 'i')]" %
                               self.remove_nodes_re)
@@ -69,6 +72,17 @@ class DocumentCleaner(object):
         doc_to_clean = self.div_to_para(doc_to_clean, 'div')
         doc_to_clean = self.div_to_para(doc_to_clean, 'span')
         doc_to_clean = self.div_to_para(doc_to_clean, 'section')
+        doc_to_clean = self.clean_prefixes(doc_to_clean)
+        return doc_to_clean
+
+    def clean_prefixes(self, doc_to_clean):
+        for beginning_text in self.remove_nodes_beginning_with_text:
+            search_string = f'''.//*[starts-with(translate(text(), 'ABCDEFGHJIKLMNOPQRSTUVWXYZ', 'abcdefghjiklmnopqrstuvwxyz'), "{beginning_text}")]'''
+            print(search_string)
+            naughty_list = self.parser.xpath_re(doc_to_clean, search_string)
+            for node in naughty_list:
+                if not node.xpath(self.contains_article):
+                    self.parser.remove(node)
         return doc_to_clean
 
     def clean_body_classes(self, doc):
